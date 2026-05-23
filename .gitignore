@@ -1,0 +1,8 @@
+# Nunca subir las contraseñas a GitHub
+.streamlit/secrets.toml
+
+# Archivos del sistema
+__pycache__/
+*.pyc
+.DS_Store
+*.xlsx
