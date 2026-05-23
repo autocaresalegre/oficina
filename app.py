@@ -6,7 +6,7 @@
 #  - Acceso admin discreto y oculto
 #  - Sin globos, sin sidebar en vista conductor
 # ============================================================
- 
+
 import streamlit as st
 import pandas as pd
 import json
@@ -16,7 +16,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from datetime import date, datetime, time
 import io
- 
+
 # ============================================================
 # 1. CONFIGURACIÓN GENERAL
 # ============================================================
@@ -26,12 +26,12 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed"
 )
- 
+
 # ============================================================
 # 2. CONSTANTES
 # ============================================================
 PASSWORD_ADMIN = "alegre2026"
- 
+
 PRECIOS_FIJOS = {
     "Pilotos":         15.00,
     "Pescadores":      15.00,
@@ -43,11 +43,11 @@ PRECIOS_FIJOS = {
     "Transfer":        20.00,
 }
 LISTA_FIJOS = list(PRECIOS_FIJOS.keys())
- 
+
 PRECIO_DIETA       = 15.00
 PRECIO_HORA_SEMANA = 10.00
 PRECIO_HORA_FINDE  = 12.00
- 
+
 FESTIVOS = {
     date(2025,  1,  1), date(2025,  1,  6), date(2025,  3, 19),
     date(2025,  4, 17), date(2025,  4, 18), date(2025,  4, 28),
@@ -60,14 +60,14 @@ FESTIVOS = {
     date(2026, 10, 12), date(2026, 11,  1), date(2026, 12,  6),
     date(2026, 12,  8), date(2026, 12, 25),
 }
- 
+
 COLUMNAS_BD = [
     "conductor", "fecha", "dieta",
     "servicios_fijos",
     "servicios_horas",
     "observaciones"
 ]
- 
+
 # ============================================================
 # 3. CSS — Optimizado para móvil, compacto
 # ============================================================
@@ -75,14 +75,14 @@ CSS = """
 <style>
     /* Ocultar sidebar en vista conductor */
     [data-testid="stSidebar"] { display: none; }
- 
+
     /* Reducir márgenes generales */
     .block-container {
         padding-top: 1rem !important;
         padding-bottom: 1rem !important;
         max-width: 480px !important;
     }
- 
+
     /* Botones grandes para móvil */
     .stButton > button {
         height: 3rem;
@@ -91,7 +91,7 @@ CSS = """
         border-radius: 10px;
         width: 100%;
     }
- 
+
     /* Etiquetas legibles */
     .stSelectbox > label, .stDateInput > label,
     .stTextInput > label, .stTimeInput > label,
@@ -100,13 +100,13 @@ CSS = """
         font-size: 0.95rem !important;
         font-weight: 600 !important;
     }
- 
+
     /* Reducir espacio entre elementos */
     .stSelectbox, .stDateInput, .stTextInput,
     .stTimeInput, .stNumberInput, .stCheckbox {
         margin-bottom: -0.5rem !important;
     }
- 
+
     /* Caja servicios fijos */
     .servicio-box {
         background: #f0f4ff;
@@ -115,7 +115,7 @@ CSS = """
         border-radius: 8px;
         margin-bottom: 0.6rem;
     }
- 
+
     /* Caja servicios por horas */
     .horas-box {
         background: #fff8f0;
@@ -124,7 +124,7 @@ CSS = """
         border-radius: 8px;
         margin-bottom: 0.6rem;
     }
- 
+
     /* Caja resumen */
     .resumen-box {
         background: #f0fff4;
@@ -133,7 +133,7 @@ CSS = """
         border-radius: 10px;
         margin-bottom: 1rem;
     }
- 
+
     /* Enlace admin discreto */
     .admin-link {
         text-align: center;
@@ -144,7 +144,7 @@ CSS = """
     }
 </style>
 """
- 
+
 CSS_ADMIN = """
 <style>
     /* En admin sí se ve el sidebar */
@@ -155,22 +155,22 @@ CSS_ADMIN = """
     }
 </style>
 """
- 
+
 # ============================================================
 # 4. CONEXIÓN A SUPABASE
 # ============================================================
- 
+
 @st.cache_resource
 def get_supabase():
     url = st.secrets["supabase"]["url"]
     key = st.secrets["supabase"]["key"]
     return create_client(url, key)
- 
- 
+
+
 # ============================================================
 # 5. LECTURA Y ESCRITURA
 # ============================================================
- 
+
 @st.cache_data(ttl=60)
 def cargar_conductores():
     try:
@@ -180,8 +180,8 @@ def cargar_conductores():
     except Exception as e:
         st.error(f"❌ Error al cargar conductores: {e}")
         return []
- 
- 
+
+
 @st.cache_data(ttl=20)
 def cargar_datos_brutos():
     try:
@@ -199,8 +199,8 @@ def cargar_datos_brutos():
     except Exception as e:
         st.error(f"❌ Error al cargar datos: {e}")
         return pd.DataFrame(columns=COLUMNAS_BD)
- 
- 
+
+
 def guardar_fila(fila_dict):
     try:
         sb = get_supabase()
@@ -210,8 +210,8 @@ def guardar_fila(fila_dict):
     except Exception as e:
         st.error(f"❌ Error al guardar: {e}")
         return False
- 
- 
+
+
 def guardar_tabla_completa(df):
     try:
         sb = get_supabase()
@@ -236,20 +236,20 @@ def guardar_tabla_completa(df):
     except Exception as e:
         st.error(f"❌ Error al guardar cambios: {e}")
         return False
- 
- 
+
+
 # ============================================================
 # 6. CÁLCULO
 # ============================================================
- 
+
 def es_dia_especial(fecha):
     if isinstance(fecha, datetime): fecha = fecha.date()
     elif isinstance(fecha, str):
         try: fecha = pd.to_datetime(fecha).date()
         except: return False
     return fecha.weekday() >= 5 or fecha in FESTIVOS
- 
- 
+
+
 def calcular_horas(h_ini, h_fin):
     try:
         if isinstance(h_ini, str): h_ini = datetime.strptime(h_ini.strip(), "%H:%M").time()
@@ -259,25 +259,25 @@ def calcular_horas(h_ini, h_fin):
         return round((fin - inicio).total_seconds() / 3600, 4) if fin > inicio else 0.0
     except:
         return 0.0
- 
- 
+
+
 def calcular_liquidacion(df):
     if df.empty:
         return pd.DataFrame()
     df = df.copy()
     df["fecha"] = pd.to_datetime(df["fecha"], errors="coerce").dt.date
- 
+
     def a_bool(v):
         if isinstance(v, bool): return v
         return str(v).strip().lower() in ["true","1","sí","si"]
     df["dieta"] = df["dieta"].fillna(False).apply(a_bool)
- 
+
     resultados = []
     for _, fila in df.iterrows():
         conductor = fila.get("conductor","")
         fecha     = fila.get("fecha")
         if pd.isna(fecha): continue
- 
+
         es_esp    = es_dia_especial(fecha)
         tarifa    = PRECIO_HORA_FINDE if es_esp else PRECIO_HORA_SEMANA
         imp_dieta = PRECIO_DIETA if fila.get("dieta") else 0.0
@@ -285,7 +285,7 @@ def calcular_liquidacion(df):
         horas_tot = 0.0
         imp_horas = 0.0
         imp_fijos = 0.0
- 
+
         sf_raw = fila.get("servicios_fijos")
         if sf_raw and str(sf_raw) not in ("","nan","None","[]"):
             try:
@@ -296,7 +296,7 @@ def calcular_liquidacion(df):
                         imp_fijos += PRECIOS_FIJOS[tipo] * cant
                         conceptos.append(f"{tipo}" if cant==1 else f"{tipo} x{cant}")
             except: pass
- 
+
         sh_raw = fila.get("servicios_horas")
         if sh_raw and str(sh_raw) not in ("","nan","None","[]"):
             try:
@@ -311,7 +311,7 @@ def calcular_liquidacion(df):
                     if concepto:
                         conceptos.append(concepto)
             except: pass
- 
+
         obs = str(fila.get("observaciones","")) if fila.get("observaciones") else ""
         resultados.append({
             "Conductor":                 conductor,
@@ -324,15 +324,15 @@ def calcular_liquidacion(df):
             "IMPORTE DIETAS (€)":        round(imp_dieta, 2),
             "TOTAL GENERAL A PAGAR (€)": round(imp_horas+imp_fijos+imp_dieta, 2),
         })
- 
+
     df_res = pd.DataFrame(resultados)
     return df_res.sort_values(["Conductor","Fecha"]).reset_index(drop=True)
- 
- 
+
+
 # ============================================================
 # 7. EXCEL
 # ============================================================
- 
+
 def generar_excel_bytes(df_cierre):
     output = io.BytesIO()
     wb = openpyxl.Workbook()
@@ -346,7 +346,7 @@ def generar_excel_bytes(df_cierre):
     al_c=Alignment(horizontal="center",vertical="center",wrap_text=True)
     al_d=Alignment(horizontal="right", vertical="center")
     al_i=Alignment(horizontal="left",  vertical="center",wrap_text=True)
- 
+
     cabeceras=["Conductor","Fecha","Conceptos del Día","Observaciones",
                "Horas Extras\nTotales","IMPORTE\nHORAS (€)",
                "IMPORTE\nFIJOS (€)","IMPORTE\nDIETAS (€)","TOTAL GENERAL\nA PAGAR (€)"]
@@ -356,7 +356,7 @@ def generar_excel_bytes(df_cierre):
         c.fill=PatternFill("solid",fgColor=C_AZUL)
         c.alignment=al_c; c.border=borde
     ws.row_dimensions[1].height=42
- 
+
     for idx,fila in df_cierre.iterrows():
         fxls=idx+2; fecha=fila["Fecha"]
         fondo=es_dia_especial(fecha)
@@ -378,7 +378,7 @@ def generar_excel_bytes(df_cierre):
                 c.font=Font(bold=True,size=10,name="Calibri")
                 if not fondo: c.fill=PatternFill("solid",fgColor=C_VERDE)
         ws.row_dimensions[fxls].height=20
- 
+
     ft=len(df_cierre)+2
     ct=ws.cell(row=ft,column=1,value="✔  TOTAL GLOBAL")
     ct.font=Font(bold=True,size=12,color="FFFFFF",name="Calibri")
@@ -403,15 +403,15 @@ def generar_excel_bytes(df_cierre):
     ws.auto_filter.ref=f"A1:I{ft-1}"
     wb.save(output); output.seek(0)
     return output.getvalue()
- 
- 
+
+
 # ============================================================
 # 8. VISTA DEL CONDUCTOR
 # ============================================================
- 
+
 def vista_conductor():
     st.markdown(CSS, unsafe_allow_html=True)
- 
+
     # ── Pantalla: ÉXITO ──────────────────────────────────────
     if st.session_state.get("envio_ok"):
         info = st.session_state.get("envio_info", {})
@@ -429,35 +429,35 @@ def vista_conductor():
             st.session_state.resumen   = False
         st.markdown('<p class="admin-link">· · ·</p>', unsafe_allow_html=True)
         return
- 
+
     # ── Pantalla: RESUMEN (confirmación antes de guardar) ───
     if st.session_state.get("resumen"):
         datos = st.session_state.get("datos_resumen", {})
         st.markdown("## 🚌 Autocares Alegre")
         st.markdown("### 📋 Revisa tu registro")
         st.divider()
- 
+
         st.markdown(f"👤 **Conductor:** {datos.get('nombre','')}")
         st.markdown(f"📅 **Fecha:** {datos.get('fecha_str','')}")
         st.markdown(f"🍽️ **Dieta:** {'Sí' if datos.get('dieta') else 'No'}")
- 
+
         fijos_ok = datos.get("fijos_ok", [])
         if fijos_ok:
             st.markdown("**📌 Servicios Fijos:**")
             for f in fijos_ok:
                 cant = f['cantidad']
                 st.markdown(f"- {f['tipo']}" + (f" × {cant}" if cant > 1 else ""))
- 
+
         horas_ok = datos.get("horas_ok", [])
         if horas_ok:
             st.markdown("**🕐 Servicios Por Horas:**")
             for h in horas_ok:
                 st.markdown(f"- {h['concepto']} ({h['inicio']} → {h['fin']})")
- 
+
         obs = datos.get("observaciones","")
         if obs:
             st.markdown(f"**💬 Observaciones:** {obs}")
- 
+
         st.divider()
         c1, c2 = st.columns(2)
         with c1:
@@ -487,32 +487,32 @@ def vista_conductor():
                     st.session_state.n_horas = 1
                     st.rerun()
         return
- 
+
     # ── Pantalla: FORMULARIO ─────────────────────────────────
     st.markdown("## 🚌 Autocares Alegre")
     st.markdown("##### Registro de Servicios Extras")
     st.divider()
- 
+
     # Nombre
     conductores = cargar_conductores()
     nombre_sel  = st.selectbox("👤 Tu Nombre",
                                ["— Selecciona —"] + conductores)
     # Fecha
     fecha_sel = st.date_input("📅 Fecha", value=date.today(), format="DD/MM/YYYY")
- 
+
     # Dieta
     dieta_sel = st.checkbox("🍽️ ¿Te corresponde Dieta hoy?", value=False)
     st.markdown("---")
- 
+
     # ── Servicios Fijos ──────────────────────────────────────
     st.markdown("**📌 Servicios Fijos**")
- 
+
     if "n_fijos" not in st.session_state:
         st.session_state.n_fijos = 1
- 
+
     fijos_capturados = []
     for i in range(st.session_state.n_fijos):
-        st.markdown('<div class="servicio-box">', unsafe_allow_html=True)
+        st.markdown("---")
         c1, c2 = st.columns([3,1])
         with c1:
             tipo_sel = st.selectbox(f"Servicio #{i+1}",
@@ -523,8 +523,8 @@ def vista_conductor():
                                        max_value=20, value=1,
                                        key=f"fijo_cant_{i}")
         fijos_capturados.append({"tipo": tipo_sel, "cantidad": cant_sel})
-        st.markdown("</div>", unsafe_allow_html=True)
- 
+        
+
     c1, c2 = st.columns(2)
     with c1:
         if st.button("➕ Añadir fijo", type="secondary", use_container_width=True):
@@ -535,18 +535,18 @@ def vista_conductor():
             if st.button("➖ Quitar", type="secondary", use_container_width=True):
                 st.session_state.n_fijos -= 1
                 st.rerun()
- 
+
     st.markdown("---")
- 
+
     # ── Servicios Por Horas ──────────────────────────────────
     st.markdown("**🕐 Servicios Por Horas**")
- 
+
     if "n_horas" not in st.session_state:
         st.session_state.n_horas = 1
- 
+
     horas_capturadas = []
     for i in range(st.session_state.n_horas):
-        st.markdown('<div class="horas-box">', unsafe_allow_html=True)
+        st.markdown("---")
         concepto_inp = st.text_input(
             f"Concepto / Destino #{i+1}",
             placeholder="Ej: Excursión a Gandía / Vigilancia Base",
@@ -558,8 +558,8 @@ def vista_conductor():
         with c2:
             h_fin = st.time_input("🕔 Fin",    value=time(16,0), step=300, key=f"h_fin_{i}")
         horas_capturadas.append({"concepto": concepto_inp, "hora_ini": h_ini, "hora_fin": h_fin})
-        st.markdown("</div>", unsafe_allow_html=True)
- 
+        
+
     c3, c4 = st.columns(2)
     with c3:
         if st.button("➕ Añadir horas", type="secondary", use_container_width=True):
@@ -570,31 +570,31 @@ def vista_conductor():
             if st.button("➖ Quitar ", type="secondary", use_container_width=True):
                 st.session_state.n_horas -= 1
                 st.rerun()
- 
+
     st.markdown("---")
- 
+
     # ── Observaciones ────────────────────────────────────────
     observaciones = st.text_area(
         "💬 Observaciones (opcional)",
         placeholder="Incidencias, dudas o comentarios del día...",
         height=70
     )
- 
+
     st.divider()
- 
+
     # ── Botón: ir al resumen ─────────────────────────────────
     if st.button("👁️  VER RESUMEN Y CONFIRMAR", type="primary", use_container_width=True):
         errores = []
- 
+
         if nombre_sel == "— Selecciona —":
             errores.append("❌ Debes seleccionar tu nombre.")
- 
+
         fijos_ok = [
             {"tipo": f["tipo"], "cantidad": int(f["cantidad"])}
             for f in fijos_capturados
             if f["tipo"] != "— Elige —"
         ]
- 
+
         horas_ok = []
         for i, h in enumerate(horas_capturadas):
             if h["concepto"].strip():
@@ -606,10 +606,10 @@ def vista_conductor():
                         "inicio":   h["hora_ini"].strftime("%H:%M"),
                         "fin":      h["hora_fin"].strftime("%H:%M")
                     })
- 
+
         if not fijos_ok and not horas_ok and not errores:
             errores.append("❌ Añade al menos un servicio fijo o por horas.")
- 
+
         if errores:
             for msg in errores:
                 st.error(msg)
@@ -625,22 +625,22 @@ def vista_conductor():
                 "observaciones": observaciones.strip(),
             }
             st.rerun()
- 
+
     # Enlace admin discreto (casi invisible)
     st.markdown('<p class="admin-link"><a href="?admin=1" style="color:#cccccc;text-decoration:none;">· · ·</a></p>',
                 unsafe_allow_html=True)
- 
- 
+
+
 # ============================================================
 # 9. VISTA DE ADMINISTRACIÓN
 # ============================================================
- 
+
 def vista_admin():
     st.markdown(CSS_ADMIN, unsafe_allow_html=True)
- 
+
     if "admin_ok" not in st.session_state:
         st.session_state.admin_ok = False
- 
+
     if not st.session_state.admin_ok:
         st.title("🔐 Administración")
         st.divider()
@@ -652,7 +652,7 @@ def vista_admin():
             else:
                 st.error("❌ Contraseña incorrecta.")
         return
- 
+
     c1, c2 = st.columns([5,1])
     with c1:
         st.title("📊 Administración — Autocares Alegre")
@@ -662,15 +662,15 @@ def vista_admin():
             st.session_state.admin_ok = False
             st.rerun()
     st.divider()
- 
+
     # ── Registros en tiempo real ─────────────────────────────
     st.markdown("## 👁️ Registros en Tiempo Real")
     if st.button("🔄 Actualizar", type="secondary"):
         cargar_datos_brutos.clear()
         st.rerun()
- 
+
     df_brutos = cargar_datos_brutos()
- 
+
     if df_brutos.empty:
         st.info("ℹ️ Todavía no hay registros.")
     else:
@@ -701,13 +701,13 @@ def vista_admin():
                 "Observaciones":   str(row.get("observaciones","")) if row.get("observaciones") else "",
             })
         st.dataframe(pd.DataFrame(filas_vista), use_container_width=True, hide_index=True)
- 
+
     st.divider()
- 
+
     # ── Tabla de auditoría ───────────────────────────────────
     st.markdown("## 📋 Tabla de Auditoría")
     st.caption("Edita o elimina registros incorrectos directamente.")
- 
+
     if not df_brutos.empty:
         df_show = df_brutos.copy()
         df_show["dieta"] = df_show["dieta"].fillna(False).apply(
@@ -715,7 +715,7 @@ def vista_admin():
         )
         for col in ["conductor","fecha","servicios_fijos","servicios_horas","observaciones"]:
             df_show[col] = df_show[col].fillna("").astype(str)
- 
+
         df_editado = st.data_editor(
             df_show, use_container_width=True,
             num_rows="dynamic", hide_index=True,
@@ -734,9 +734,9 @@ def vista_admin():
                 ok = guardar_tabla_completa(df_editado)
             if ok:
                 st.success("✅ Cambios guardados.")
- 
+
     st.divider()
- 
+
     # ── Liquidación ──────────────────────────────────────────
     st.markdown("## 💰 Liquidación Mensual")
     if st.button("📊  CALCULAR Y GENERAR EXCEL", type="primary", use_container_width=True):
@@ -765,21 +765,21 @@ def vista_admin():
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                     type="primary", use_container_width=True,
                 )
- 
- 
+
+
 # ============================================================
 # 10. NAVEGACIÓN PRINCIPAL
 # ============================================================
- 
+
 def main():
     if "vista_actual" not in st.session_state:
         st.session_state.vista_actual = "conductor"
- 
+
     # Detectar acceso admin por parámetro URL (?admin=1)
     params = st.query_params
     if params.get("admin") == "1" and st.session_state.vista_actual == "conductor":
         st.session_state.vista_actual = "admin"
- 
+
     if st.session_state.vista_actual == "admin":
         with st.sidebar:
             st.markdown("## 🚌 Autocares Alegre")
@@ -793,8 +793,6 @@ def main():
         vista_admin()
     else:
         vista_conductor()
- 
+
 if __name__ == "__main__":
     main()
-
-
