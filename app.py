@@ -678,14 +678,23 @@ def vista_admin():
         st.info("ℹ️ Todavía no hay registros. "
                 "Los conductores deben enviar sus servicios primero.")
     else:
+        # Convertir tipos para evitar errores de compatibilidad
+        df_show = df_brutos.copy()
+        df_show["dieta"] = df_show["dieta"].fillna(False).apply(
+            lambda x: bool(x) if not isinstance(x, bool) else x
+        )
+        df_show["fecha"] = df_show["fecha"].fillna("").astype(str)
+        for col in ["conductor","tipo_extra","tipo_fijo","concepto_destino","hora_inicio","hora_fin"]:
+            df_show[col] = df_show[col].fillna("").astype(str)
+
         df_editado = st.data_editor(
-            df_brutos,
+            df_show,
             use_container_width=True,
             num_rows="dynamic",
             hide_index=True,
             column_config={
                 "conductor":        st.column_config.TextColumn("Conductor",       width="medium", required=True),
-                "fecha":            st.column_config.DateColumn("Fecha",           format="DD/MM/YYYY"),
+                "fecha":            st.column_config.TextColumn("Fecha"),
                 "dieta":            st.column_config.CheckboxColumn("🍽️ Dieta",    default=False),
                 "tipo_extra":       st.column_config.SelectboxColumn("Tipo Extra", options=["Servicio Fijo","Por Horas"]),
                 "tipo_fijo":        st.column_config.SelectboxColumn("Tipo Fijo",  options=["Pilotos","Pescadores","Logista","Saludes","Boda","Transfer"]),
